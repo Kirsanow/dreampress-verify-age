@@ -1,0 +1,33 @@
+{
+  "name": "age-estimator",
+  "version": "0.0.1",
+  "description": "Easy to use tool to estimate users age",
+  "author": "kalegd",
+  "license": "MPL-2.0",
+  "main": "build/age-estimator.js",
+  "type": "module",
+  "keywords": [
+    "age",
+    "verification"
+  ],
+  "homepage": "https://github.com/universal-verify/age-estimator#readme",
+  "bugs": {
+    "url": "https://github.com/universal-verify/age-estimator/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/universal-verify/age-estimator.git"
+  },
+  "scripts": {
+    "start": "http-server -c-1 -p 8001",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i ./styles/input.css -o ./styles/main.css --minify",
+    "watch:css": "tailwindcss -i ./styles/input.css -o ./styles/main.css --watch"
+  },
+  "dependencies": {
+    "http-server": "^14.1.1"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
