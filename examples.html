@@ -62,6 +62,34 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Liveness Check Method -->
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-camera text-3xl text-blue-600 mr-4"></i>
+                        <h2 class="text-2xl font-semibold">Liveness Check Integration</h2>
+                    </div>
+                    <p class="text-gray-600 mb-6">
+                        Verify user's presence and prevent image spoofing attempts with our liveness detection feature. 
+                        This integration includes both age estimation and liveness verification in a single flow.
+                    </p>
+                    <div class="space-y-4 mb-6">
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">Select minimum age requirement for this demo:</span>
+                            <div class="mt-2 flex items-center">
+                                <input type="number" min="13" max="100" value="18" 
+                                    class="w-24 rounded-md border-2 border-gray-200 shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white px-1 py-1" 
+                                    id="liveness-age">
+                                <span class="ml-2 text-gray-500">years old</span>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="mt-6">
+                        <a href="./examples/demo.html?livenessCheck=true" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors" id="liveness-demo-link">
+                            View Liveness Check Demo
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- Footer -->
@@ -75,12 +103,15 @@
         // Update demo links with age parameters
         function updateDemoLinks() {
             const newTabAge = document.getElementById('new-tab-age').value;
+            const livenessAge = document.getElementById('liveness-age').value;
             
             document.getElementById('new-tab-demo-link').href = `./examples/demo.html?minAge=${newTabAge}`;
+            document.getElementById('liveness-demo-link').href = `./examples/demo.html?minAge=${livenessAge}&livenessCheck=true`;
         }
 
         // Add event listeners to age inputs
         document.getElementById('new-tab-age').addEventListener('change', updateDemoLinks);
+        document.getElementById('liveness-age').addEventListener('change', updateDemoLinks);
 
         // Initialize links
         updateDemoLinks();

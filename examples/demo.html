@@ -16,7 +16,7 @@
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center">
-                    <a href="#" class="text-2xl font-bold text-red-600">XCorn</a>
+                    <a href="https://github.com/universal-verify/age-estimator" class="text-2xl font-bold text-red-600">XCorn</a>
                 </div>
                 <div class="flex items-center space-x-4">
                     <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors">
@@ -142,11 +142,13 @@
         import ageEstimator from '../build/age-estimator.js';
 
         const minAge = new URLSearchParams(window.location.search).get('minAge') || 18;
+        const livenessCheck = new URLSearchParams(window.location.search).get('livenessCheck') || false;
         const ageVerificationOverlay = document.querySelector('#age-verification-overlay');
         const verifyAgeButton = document.querySelector('#verify-age-button');
 
         function verifyAge() {
             let params = {
+                livenessCheck: livenessCheck,
                 successCallback: (age) => {
                     if(age < minAge) {
                         ageVerificationOverlay.querySelector('p').textContent = `You look too young to access this content. You must be at least ${minAge} years old.`;
@@ -168,7 +170,11 @@
                     }
                 }, 
                 errorCallback: (error) => {
-                    ageVerificationOverlay.querySelector('p').textContent = `An error occurred while verifying your age. Please try again.`;
+                    if(error == 'Different face detected for liveness check') {
+                        ageVerificationOverlay.querySelector('p').textContent = `Different face detected during liveness check. Please try again.`;
+                    } else {
+                        ageVerificationOverlay.querySelector('p').textContent = `An error occurred while verifying your age. Please try again.`;
+                    }
                 }
             };
 

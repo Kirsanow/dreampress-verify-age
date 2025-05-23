@@ -6,6 +6,7 @@ class AgeEstimator {
     /**
      * Estimate age
      * @param {Object} params - The parameters for the age estimation
+     * @param {boolean} params.livenessCheck - Whether to also perform a liveness check on the user (optional)
      * @param {Function} params.successCallback - The callback function to call if the age estimation is successful (optional)
      * @param {Function} params.errorCallback - The callback function to call if the age estimation fails (optional)
      */
@@ -13,6 +14,7 @@ class AgeEstimator {
         let nonce = Math.random().toString(36).substring(2, 15);
         let url = params.localTesting ? '../index.html' : 'https://universal-verify.github.io/age-estimator/';
         let origin = params.localTesting ? window.location.origin : 'https://universal-verify.github.io';
+        let livenessCheck = params.livenessCheck || false;
         const newTab = window.open(url, '_blank');
         window.addEventListener('message', (event) => {
             if(event.source !== newTab) return;
@@ -33,7 +35,7 @@ class AgeEstimator {
                 }
                 newTab.close();
             } else if(event.data.type === 'check-parent-commandeer') {
-                newTab.postMessage({ type: 'confirm-parent-commandeer', nonce }, origin);
+                newTab.postMessage({ type: 'confirm-parent-commandeer', nonce, livenessCheck }, origin);
             }
         });
     }

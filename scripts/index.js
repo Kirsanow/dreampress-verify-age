@@ -2,6 +2,7 @@ class Main {
     constructor() {
         this.intro = document.getElementById('intro');
         this.consentForm = document.getElementById('consent-form');
+        this.loadingSection = document.getElementById('loading-section');
         this.webcamSection = document.getElementById('webcam-section');
         this.videoElement = document.getElementById('webcam');
         this.stream = null;
@@ -39,6 +40,14 @@ class Main {
                 if(event.data.type === 'confirm-parent-commandeer') {
                     this._nonce = event.data.nonce;
                     this._parentWillTakeControl = true;
+                    this._livenessCheck = event.data.livenessCheck;
+                    console.log('livenessCheck', this._livenessCheck);
+                    if(this._livenessCheck) {
+                        this.promises = Promise.all([
+                            this.promises,
+                            faceapi.nets.faceRecognitionNet.loadFromUri('./models')
+                        ]);
+                    }
                 }
             });
             window.opener.postMessage({ type: 'check-parent-commandeer' }, '*');
@@ -68,6 +77,7 @@ class Main {
         }
         this.intro.style.display = 'none';
         this.consentForm.style.display = 'none';
+        this.loadingSection.style.display = 'none';
         document.getElementById('model-error').style.display = 'block';
     }
 
@@ -78,14 +88,24 @@ class Main {
                 return;
             }
 
+            this.intro.style.display = 'none';
+            this.consentForm.style.display = 'none';
+
+            this.loadingSection.style.display = 'block';
+            try {
+                await this.promises;
+            } catch (error) {
+                this.displayModelError();
+                return;
+            }
+            this.loadingSection.style.display = 'none';
+
             this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
             this.videoElement.onloadedmetadata = () => {
                 this.videoElement.play();
                 this.startAgeEstimation();
             };
             this.videoElement.srcObject = this.stream;
-            this.intro.style.display = 'none';
-            this.consentForm.style.display = 'none';
             this.webcamSection.style.display = 'block';
             
         } catch (error) {
@@ -99,29 +119,31 @@ class Main {
     }
 
     async startAgeEstimation() {
+        let lastDetection;
         const highProbabilityAges = [];
         const lowProbabilityAges = [];
 
         const processFrame = async () => {
             try {
-                const detection = await faceapi.detectSingleFace(
-                    this.videoElement,
-                    new faceapi.TinyFaceDetectorOptions()
-                ).withFaceLandmarks().withAgeAndGender();
+                const detection = this._livenessCheck
+                    ? await faceapi.detectSingleFace(
+                        this.videoElement,
+                        new faceapi.TinyFaceDetectorOptions()
+                    ).withFaceLandmarks().withAgeAndGender().withFaceDescriptor()
+                    : await faceapi.detectSingleFace(
+                        this.videoElement,
+                        new faceapi.TinyFaceDetectorOptions()
+                    ).withFaceLandmarks().withAgeAndGender();
 
                 if (detection) {
+                    if(this._livenessCheck) {
+                        lastDetection = detection;
+                    }
                     const age = Math.round(detection.age);
-                    const gender = detection.gender;
-                    const genderProbability = Math.round(detection.genderProbability * 100);
 
                     // Update the processing text with results
                     //const resultText = `Estimated age: ${age} years (${gender} - ${genderProbability}% confidence)`;
                     this.webcamSection.querySelector('p').textContent = 'Processing age estimation...';
-
-                    // If we have a referring website, send the age
-                    if (document.referrer) {
-                        window.parent.postMessage({ type: 'AGE_ESTIMATION', age }, document.referrer);
-                    }
 
                     if(detection.detection.score > 0.9) {
                         highProbabilityAges.push({ age, score: detection.detection.score });
@@ -139,25 +161,92 @@ class Main {
             }
 
             // Schedule next frame
-            if(highProbabilityAges.length >= 10) {
-                this.stopWebcam();
+            if(highProbabilityAges.length >= 5) {
                 let averageAge = this.computeAverageAge(highProbabilityAges);
                 if(this._parentWillTakeControl) {
+                    if(this._livenessCheck) {
+                        this._ageFaceDescriptor = lastDetection.descriptor;
+                        this.startLivenessCheck(averageAge);
+                        return;
+                    }
+                    this.stopWebcam();
                     window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
                 } else {
+                    this.stopWebcam();
                     this.displayAge(averageAge);
                 }
-            } else if(lowProbabilityAges.length >= 20) {
-                this.stopWebcam();
+            } else if(lowProbabilityAges.length >= 10) {
                 let averageAge = this.computeAverageAge(lowProbabilityAges);
                 if(this._parentWillTakeControl) {
+                    if(this._livenessCheck) {
+                        this._ageFaceDescriptor = lastDetection.descriptor;
+                        this.startLivenessCheck(averageAge);
+                        return;
+                    }
                     window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
                 } else {
+                    this.stopWebcam();
                     this.displayAge(averageAge);
                 }
             } else {
                 setTimeout(() => processFrame(), 250);
             }
+        };
+
+        // Start processing frames
+        processFrame();
+    }
+
+    async startLivenessCheck(averageAge) {
+        let direction = 'to your left';
+        let flipped = false;
+        const processFrame = async () => {
+            try {
+                const detection = await faceapi.detectSingleFace(
+                    this.videoElement,
+                    new faceapi.TinyFaceDetectorOptions()
+                ).withFaceLandmarks().withFaceDescriptor();
+
+                if (detection) {
+                    const age = Math.round(detection.age);
+
+                    this.webcamSection.querySelector('p').textContent = 'Please look ' + direction;
+
+                    //check if the face is looking to the left or right
+                    let leftEye = detection.landmarks.getLeftEye()[0].x;
+                    let rightEye = detection.landmarks.getRightEye()[0].x;
+                    let nose = detection.landmarks.getNose()[0].x;
+                    if(direction == 'to your left' && nose < leftEye) {//looking left
+                        direction = 'to your right';
+                    } else if(direction == 'to your left' && nose > rightEye) {//looking left flipped
+                        direction = 'to your right';
+                        flipped = true;
+                    } else if(direction == 'to your right' && !flipped && nose > rightEye) {//looking right
+                        direction = 'straight';
+                    } else if(direction == 'to your right' && flipped && nose < leftEye) {//looking right flipped
+                        direction = 'straight';
+                    } else if(direction == 'straight' && detection.detection.score > 0.85){
+                        let livenessFaceDescriptor = detection.descriptor;
+                        let livenessScore = faceapi.euclideanDistance(this._ageFaceDescriptor, livenessFaceDescriptor);
+                        if(livenessScore < 0.6) {
+                            this.stopWebcam();
+                            window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
+                            return;
+                        } else {
+                            this.stopWebcam();
+                            window.opener.postMessage({ type: 'age-estimation-error', error: 'Different face detected for liveness check', nonce: this._nonce }, '*');
+                            return;
+                        }
+                    }
+
+                } else {
+                    this.webcamSection.querySelector('p').textContent = 'No face detected. Please position your face in the camera view.';
+                }
+            } catch (error) {
+                console.error('Error processing frame:', error);
+            }
+
+            setTimeout(() => processFrame(), 250);
         };
 
         // Start processing frames
