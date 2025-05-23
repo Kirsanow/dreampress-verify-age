@@ -40,4 +40,5 @@ class AgeEstimator {
 }
 
 const ageEstimator = new AgeEstimator();
-export default ageEstimator;
+
+export { ageEstimator as default };
