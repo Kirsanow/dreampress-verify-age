@@ -1,6 +1,6 @@
 # Age Estimator
 
-A privacy-focused tool for estimating user age using local facial recognition. All processing happens on the user's device - no data is ever sent to servers.
+A privacy-focused tool for estimating user age using local facial recognition. All processing happens on the user's device - no data is ever sent to any servers.
 
 ## Live Demo
 
@@ -21,23 +21,29 @@ npm install age-estimator
 ```javascript
 import ageEstimator from 'age-estimator';
 
-// Basic usage
-ageEstimator.estimateAge({
-    livenessCheck: true,
-    successCallback: (age) => {
-        console.log(`User's estimated age: ${age}`);
-    },
-    errorCallback: (error) => {
-        console.error('Age verification failed:', error);
-    }
-});
+// Basic usage with async/await
+try {
+    const age = await ageEstimator.estimateAge({ livenessCheck: true });
+    console.log('Estimated age:', age);
+} catch (error) {
+    console.error('Age estimation failed:', error);
+}
+
+// Or with .then/.catch
+ageEstimator.estimateAge({ livenessCheck: true })
+    .then(age => {
+        console.log('Estimated age:', age);
+    })
+    .catch(error => {
+        console.error('Age estimation failed:', error);
+    });
 ```
 
 ### API Reference
 
 #### `estimateAge(params)`
 
-Opens the age estimator in a new tab and returns the estimated age via callback.
+Opens the age estimator in a new tab and returns a Promise that resolves with the estimated age or rejects on error.
 
 ##### Parameters
 
@@ -45,35 +51,25 @@ Opens the age estimator in a new tab and returns the estimated age via callback.
   - `livenessCheck` (Boolean): Optional parameter to enable liveness detection
     - When true, performs additional verification to ensure the user is present
     - Helps prevent spoofing attempts using photos
-  - `successCallback` (Function): Called when age estimation is successful
-    - Receives the estimated age as a number
-  - `errorCallback` (Function): Called when age estimation fails
-    - Receives the error message as a string
 
-##### Example with all options
+##### Returns
 
-```javascript
-ageEstimator.estimateAge({
-    livenessCheck: true,
-    successCallback: (age) => {
-        if (age < 18) {
-            console.log('User is too young');
-        } else {
-            console.log('User meets minimum age requirements');
-        }
-    },
-    errorCallback: (error) => {
-        console.error('Age verification failed:', error);
-    },
-});
-```
+- `Promise`: Resolves with the estimated age (number) if successful, rejects with an error code if it fails, the tab is closed, the popup is blocked, or a different face was detected during the liveness check.
+
+##### Possible Rejection Error Codes
+
+- `CANCELLED`: The user closed the age estimation tab before completing the process.
+- `POPUP_BLOCKED`: The browser blocked the popup window from opening.
+- `WEBCAM_ERROR`: There was an issue accessing the user's webcam (e.g., permission denied or device not found).
+- `DIFFERENT_FACE_ERROR`: The face detected during liveness check was different from the one used for age estimation.
+- `INTERNAL_ERROR`: An unexpected error occurred during the age estimation process.
 
 ## Privacy
 
 The age estimator processes all data locally on the user's device:
 
 - Video from the user's camera is processed in real-time
-- No video or biometric data is ever sent to servers
+- No video or biometric data is ever sent to any servers
 - If directed from another website, only the estimated age is shared
 - All processing happens in the user's browser
 

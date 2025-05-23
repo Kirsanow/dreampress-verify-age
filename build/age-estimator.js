@@ -7,36 +7,62 @@ class AgeEstimator {
      * Estimate age
      * @param {Object} params - The parameters for the age estimation
      * @param {boolean} params.livenessCheck - Whether to also perform a liveness check on the user (optional)
-     * @param {Function} params.successCallback - The callback function to call if the age estimation is successful (optional)
-     * @param {Function} params.errorCallback - The callback function to call if the age estimation fails (optional)
+     * @returns {Promise} Resolves with the estimated age on success, rejects on error
      */
     estimateAge(params = {}) {
-        let nonce = Math.random().toString(36).substring(2, 15);
-        let url = params.localTesting ? '../index.html' : 'https://universal-verify.github.io/age-estimator/';
-        let origin = params.localTesting ? window.location.origin : 'https://universal-verify.github.io';
-        let livenessCheck = params.livenessCheck || false;
-        const newTab = window.open(url, '_blank');
-        window.addEventListener('message', (event) => {
-            if(event.source !== newTab) return;
-            if(event.data.type === 'age-estimation-result') {
-                if(event.data.nonce !== nonce) return;
-                if(params.successCallback) {
-                    params.successCallback(event.data.age);
-                } else {
-                    console.log('Missing successCallback for age estimation');
-                }
-                newTab.close();
-            } else if(event.data.type === 'age-estimation-error') {
-                if(params.errorCallback) {
-                    if(event.data.nonce !== nonce) return;
-                    params.errorCallback(event.data.error);
-                } else {
-                    console.log('Missing errorCallback for age estimation');
-                }
-                newTab.close();
-            } else if(event.data.type === 'check-parent-commandeer') {
-                newTab.postMessage({ type: 'confirm-parent-commandeer', nonce, livenessCheck }, origin);
+        return new Promise((resolve, reject) => {
+            let settled = false;
+            const nonce = Math.random().toString(36).substring(2, 15);
+            const url = params.localTesting ? '../index.html' : 'https://universal-verify.github.io/age-estimator/';
+            const origin = params.localTesting ? window.location.origin : 'https://universal-verify.github.io';
+            const livenessCheck = params.livenessCheck || false;
+            const newTab = window.open(url, '_blank');
+
+            if (!newTab) {
+                reject('POPUP_BLOCKED');
+                return;
             }
+
+            function cleanup() {
+                window.removeEventListener('message', handler);
+                clearInterval(tabCheckInterval);
+            }
+
+            function handler(event) {
+                if (event.source !== newTab) return;
+                if (event.data.type === 'age-estimation-result') {
+                    if (event.data.nonce !== nonce) return;
+                    settled = true;
+                    resolve(event.data.age);
+                    newTab.close();
+                    cleanup();
+                } else if (event.data.type === 'age-estimation-error') {
+                    if (event.data.nonce !== nonce) return;
+                    settled = true;
+                    if(event.data.error.includes('webcam')) {
+                        reject('WEBCAM_ERROR');
+                    } else if(event.data.error.includes('Different face')) {
+                        reject('DIFFERENT_FACE_ERROR');
+                    } else {
+                        reject('INTERNAL_ERROR');
+                    }
+                    newTab.close();
+                    cleanup();
+                } else if (event.data.type === 'check-parent-commandeer') {
+                    newTab.postMessage({ type: 'confirm-parent-commandeer', nonce, livenessCheck }, origin);
+                }
+            }
+
+            window.addEventListener('message', handler);
+
+            // Check if the tab is closed before resolving/rejecting
+            const tabCheckInterval = setInterval(() => {
+                if (newTab.closed && !settled) {
+                    settled = true;
+                    reject('CANCELLED');
+                    cleanup();
+                }
+            }, 500);
         });
     }
 }

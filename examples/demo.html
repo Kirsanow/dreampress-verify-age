@@ -139,49 +139,56 @@
     </main>
 
     <script type="module">
-        import ageEstimator from 'https://cdn.jsdelivr.net/npm/age-estimator@0.0.2/build/age-estimator.min.js';
+        import ageEstimator from 'https://cdn.jsdelivr.net/npm/age-estimator@0.0.3/build/age-estimator.min.js';
 
         const minAge = new URLSearchParams(window.location.search).get('minAge') || 18;
         const livenessCheck = new URLSearchParams(window.location.search).get('livenessCheck') || false;
         const ageVerificationOverlay = document.querySelector('#age-verification-overlay');
         const verifyAgeButton = document.querySelector('#verify-age-button');
 
-        function verifyAge() {
-            let params = {
-                livenessCheck: livenessCheck,
-                successCallback: (age) => {
-                    if(age < minAge) {
-                        ageVerificationOverlay.querySelector('p').textContent = `You look too young to access this content. You must be at least ${minAge} years old.`;
-                    } else {
-                        // Show success overlay
-                        const successOverlay = document.getElementById('success-overlay');
-                        successOverlay.classList.remove('opacity-0', 'pointer-events-none');
-                        
-                        // Hide verification overlay
-                        ageVerificationOverlay.style.display = 'none';
-                        
-                        // Fade out success overlay after 4 seconds
-                        setTimeout(() => {
-                            successOverlay.classList.add('opacity-0');
-                            setTimeout(() => {
-                                successOverlay.classList.add('pointer-events-none');
-                            }, 1000);
-                        }, 4000);
-                    }
-                }, 
-                errorCallback: (error) => {
-                    if(error == 'Different face detected for liveness check') {
-                        ageVerificationOverlay.querySelector('p').textContent = `Different face detected during liveness check. Please try again.`;
-                    } else {
-                        ageVerificationOverlay.querySelector('p').textContent = `An error occurred while verifying your age. Please try again.`;
-                    }
-                }
+        async function verifyAge() {
+            const params = {
+                livenessCheck: livenessCheck
             };
 
             if(window.location.origin.includes('localhost')) {
                 params.localTesting = true;
             }
-            ageEstimator.estimateAge(params);
+
+            try {
+                const age = await ageEstimator.estimateAge(params);
+                
+                if(age < minAge) {
+                    ageVerificationOverlay.querySelector('p').textContent = `You look too young to access this content. You must be at least ${minAge} years old.`;
+                } else {
+                    // Show success overlay
+                    const successOverlay = document.getElementById('success-overlay');
+                    successOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                    
+                    // Hide verification overlay
+                    ageVerificationOverlay.style.display = 'none';
+                    
+                    // Fade out success overlay after 4 seconds
+                    setTimeout(() => {
+                        successOverlay.classList.add('opacity-0');
+                        setTimeout(() => {
+                            successOverlay.classList.add('pointer-events-none');
+                        }, 1000);
+                    }, 4000);
+                }
+            } catch (error) {
+                if(error === 'DIFFERENT_FACE_ERROR') {
+                    ageVerificationOverlay.querySelector('p').textContent = `Different face detected during liveness check. Please try again.`;
+                } else if(error === 'WEBCAM_ERROR') {
+                    ageVerificationOverlay.querySelector('p').textContent = `Unable to access your webcam. Please ensure you have granted camera permissions.`;
+                } else if(error === 'POPUP_BLOCKED') {
+                    ageVerificationOverlay.querySelector('p').textContent = `Popup was blocked. Please allow popups for this site and try again.`;
+                } else if(error === 'CANCELLED') {
+                    ageVerificationOverlay.querySelector('p').textContent = `Age verification was cancelled. Please try again.`;
+                } else {
+                    ageVerificationOverlay.querySelector('p').textContent = `An error occurred while verifying your age. Please try again.`;
+                }
+            }
         }
 
         verifyAgeButton.addEventListener('click', verifyAge);

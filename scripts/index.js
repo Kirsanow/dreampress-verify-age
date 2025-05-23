@@ -143,7 +143,6 @@ class Main {
                     const age = Math.round(detection.age);
 
                     // Update the processing text with results
-                    //const resultText = `Estimated age: ${age} years (${gender} - ${genderProbability}% confidence)`;
                     this.webcamSection.querySelector('p').textContent = 'Processing age estimation...';
 
                     if(detection.detection.score > 0.9) {
