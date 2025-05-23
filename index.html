@@ -72,10 +72,17 @@
 
             <!-- Webcam Section -->
             <div id="webcam-section" class="bg-white rounded-lg shadow-lg p-6 hidden">
-                <div class="aspect-w-16 aspect-h-9 mb-3">
+                <div class="aspect-w-16 aspect-h-9 mb-3 relative">
                     <video id="webcam" class="w-full h-full object-cover rounded-lg" autoplay playsinline></video>
+                    <div id="checkmark-overlay" class="absolute inset-0 flex items-center justify-center hidden">
+                        <div class="bg-green-500 bg-opacity-75 rounded-full p-4">
+                            <i class="fas fa-check text-white text-4xl"></i>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 rounded-b-lg">
+                        <p class="text-center text-white font-medium">Processing age estimation...</p>
+                    </div>
                 </div>
-                <p class="text-center text-gray-600">Processing age estimation...</p>
             </div>
 
             <!-- Results Section -->

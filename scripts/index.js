@@ -92,13 +92,13 @@ class Main {
             this.consentForm.style.display = 'none';
 
             this.loadingSection.style.display = 'block';
+            await new Promise(resolve => setTimeout(resolve, 200));
             try {
                 await this.promises;
             } catch (error) {
                 this.displayModelError();
                 return;
             }
-            this.loadingSection.style.display = 'none';
 
             this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
             this.videoElement.onloadedmetadata = () => {
@@ -107,6 +107,7 @@ class Main {
             };
             this.videoElement.srcObject = this.stream;
             this.webcamSection.style.display = 'block';
+            this.loadingSection.style.display = 'none';
             
         } catch (error) {
             console.error('Error accessing webcam:', error);
@@ -169,8 +170,7 @@ class Main {
                         this.startLivenessCheck(averageAge);
                         return;
                     }
-                    this.stopWebcam();
-                    window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
+                    this.sendAgeToParent(averageAge);
                 } else {
                     this.stopWebcam();
                     this.displayAge(averageAge);
@@ -183,7 +183,7 @@ class Main {
                         this.startLivenessCheck(averageAge);
                         return;
                     }
-                    window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
+                    this.sendAgeToParent(averageAge);
                 } else {
                     this.stopWebcam();
                     this.displayAge(averageAge);
@@ -229,8 +229,7 @@ class Main {
                         let livenessFaceDescriptor = detection.descriptor;
                         let livenessScore = faceapi.euclideanDistance(this._ageFaceDescriptor, livenessFaceDescriptor);
                         if(livenessScore < 0.6) {
-                            this.stopWebcam();
-                            window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
+                            this.sendAgeToParent(averageAge);
                             return;
                         } else {
                             this.stopWebcam();
@@ -258,6 +257,16 @@ class Main {
         const totalAge = ages.reduce((sum, age) => sum + age.age * age.score, 0);
         const totalWeight = ages.reduce((sum, age) => sum + age.score, 0);
         return Math.floor(totalAge / totalWeight);
+    }
+
+    sendAgeToParent(age) {
+        const checkmarkOverlay = document.getElementById('checkmark-overlay');
+        checkmarkOverlay.classList.remove('hidden');
+        
+        setTimeout(() => {
+            this.stopWebcam();
+            window.opener.postMessage({ type: 'age-estimation-result', age: age, nonce: this._nonce }, '*');
+        }, 1000);
     }
 
     displayAge(age) {
