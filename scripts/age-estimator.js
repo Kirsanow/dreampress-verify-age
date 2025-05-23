@@ -3,23 +3,17 @@ class AgeEstimator {
 
     }
 
-    verifyAge(params = {}) {
-        if(params.localTesting) {
-            this._verifyAgeLocal(params);
-            return;
-        }
-        window.location.href = 'https://universal-verify.github.io/age-estimator/';
-    }
-
     /**
-     * Verify age locally
+     * Verify age
      * @param {Object} params - The parameters for the age verification
      * @param {Function} params.successCallback - The callback function to call if the age verification is successful (optional)
      * @param {Function} params.errorCallback - The callback function to call if the age verification fails (optional)
      */
-    _verifyAgeLocal(params = {}) {
+    verifyAge(params = {}) {
         let nonce = Math.random().toString(36).substring(2, 15);
-        const newTab = window.open('/index.html', '_blank');
+        let url = params.localTesting ? '../index.html' : 'https://universal-verify.github.io/age-estimator/';
+        let origin = params.localTesting ? window.location.origin : 'https://universal-verify.github.io';
+        const newTab = window.open(url, '_blank');
         window.addEventListener('message', (event) => {
             if(event.source !== newTab) return;
             if(event.data.type === 'age-estimation-result') {
@@ -39,7 +33,7 @@ class AgeEstimator {
                 }
                 newTab.close();
             } else if(event.data.type === 'check-parent-commandeer') {
-                newTab.postMessage({ type: 'confirm-parent-commandeer', nonce }, window.location.origin);
+                newTab.postMessage({ type: 'confirm-parent-commandeer', nonce }, origin);
             }
         });
     }
