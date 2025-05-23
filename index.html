@@ -9,27 +9,28 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicons/favicon-16x16.png">
-    <script src="/scripts/Main.js" type="module" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="/scripts/index.js" type="module" defer></script>
 </head>
-<body class="font-sans">
+<body class="font-sans bg-gradient-to-r from-blue-50 to-indigo-50">
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg w-full z-10">
+    <nav class="bg-white shadow-sm w-full">
         <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center text-2xl text-blue-600">
                     <a href="https://universalverify.com" class="font-bold">Universal Verify</a>
                 </div>
                 <div class="md:flex items-center space-x-8">
-                    <a href="https://github.com/universal-verify" class="text-gray-700 hover:text-blue-600">GitHub</a>
+                    <a href="https://github.com/universal-verify/age-estimator" class="text-gray-700 hover:text-blue-600">GitHub</a>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <section class="pt-8 pb-12 bg-gradient-to-r from-blue-50 to-indigo-50 min-h-screen">
+    <section class="pt-8 pb-12">
         <div class="max-w-3xl mx-auto px-4">
-            <div class="text-center mb-8">
+            <div id="intro" class="text-center mb-8">
                 <h1 class="text-3xl font-bold text-gray-900 mb-4">Age Estimation Tool</h1>
                 <p class="text-lg text-gray-600">Local age estimation using your device's camera. No data is sent to any servers.</p>
             </div>
@@ -66,6 +67,32 @@
                     <video id="webcam" class="w-full h-full object-cover rounded-lg" autoplay playsinline></video>
                 </div>
                 <p class="text-center text-gray-600">Processing age estimation...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="bg-white rounded-lg shadow-lg p-8 hidden">
+                <div class="text-center">
+                    <i class="fas fa-check-circle text-4xl text-green-500 mb-4"></i>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2">Age Estimation Complete</h2>
+                    <p class="text-4xl font-bold text-blue-600 mb-6" id="estimated-age"></p>
+                    <div class="space-y-4">
+                        <button class="try-again-btn w-fit bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Error Section -->
+            <div id="model-error" class="bg-white rounded-lg shadow-lg p-6 hidden">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                    <h2 class="text-xl font-semibold text-gray-900 mb-2">Model Loading Error</h2>
+                    <p class="text-gray-600 mb-4">Unable to load age estimation models. Please refresh the page and try again.</p>
+                    <button onclick="window.location.reload()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Refresh Page
+                    </button>
+                </div>
             </div>
 
             <!-- Footer -->
