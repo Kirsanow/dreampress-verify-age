@@ -53,7 +53,7 @@ Opens the age estimator in a new tab and returns the estimated age via callback.
 ##### Example with all options
 
 ```javascript
-ageEstimator.verifyAge({
+ageEstimator.estimateAge({
     livenessCheck: true,
     successCallback: (age) => {
         if (age < 18) {
