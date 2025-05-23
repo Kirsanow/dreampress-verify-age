@@ -5,9 +5,11 @@ class Main {
         this.webcamSection = document.getElementById('webcam-section');
         this.videoElement = document.getElementById('webcam');
         this.stream = null;
+        this._parentWillTakeControl = false;
         this.loadModels();
 
         this.initializeEventListeners();
+        this.setupPostMessageListeners();
     }
 
     async initializeEventListeners() {
@@ -31,6 +33,18 @@ class Main {
         }
     }
 
+    setupPostMessageListeners() {
+        if(window.opener) {
+            window.addEventListener('message', (event) => {
+                if(event.data.type === 'confirm-parent-commandeer') {
+                    this._nonce = event.data.nonce;
+                    this._parentWillTakeControl = true;
+                }
+            });
+            window.opener.postMessage({ type: 'check-parent-commandeer' }, '*');
+        }
+    }
+
     async loadModels() {
         try {
             this.promises = Promise.all([
@@ -48,6 +62,10 @@ class Main {
     }
 
     displayModelError() {
+        if(this._parentWillTakeControl) {
+            window.opener.postMessage({ type: 'age-estimation-error', error: 'Error loading models', nonce: this._nonce }, '*');
+            return;
+        }
         this.intro.style.display = 'none';
         this.consentForm.style.display = 'none';
         document.getElementById('model-error').style.display = 'block';
@@ -72,6 +90,10 @@ class Main {
             
         } catch (error) {
             console.error('Error accessing webcam:', error);
+            if(this._parentWillTakeControl) {
+                window.opener.postMessage({ type: 'age-estimation-error', error: 'Error accessing webcam', nonce: this._nonce }, '*');
+                return;
+            }
             alert('Unable to access webcam. Please ensure you have granted permission and your webcam is working properly.');
         }
     }
@@ -119,10 +141,20 @@ class Main {
             // Schedule next frame
             if(highProbabilityAges.length >= 10) {
                 this.stopWebcam();
-                this.displayAge(this.computeAverageAge(highProbabilityAges));
+                let averageAge = this.computeAverageAge(highProbabilityAges);
+                if(this._parentWillTakeControl) {
+                    window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
+                } else {
+                    this.displayAge(averageAge);
+                }
             } else if(lowProbabilityAges.length >= 20) {
                 this.stopWebcam();
-                this.displayAge(this.computeAverageAge(lowProbabilityAges));
+                let averageAge = this.computeAverageAge(lowProbabilityAges);
+                if(this._parentWillTakeControl) {
+                    window.opener.postMessage({ type: 'age-estimation-result', age: averageAge, nonce: this._nonce }, '*');
+                } else {
+                    this.displayAge(averageAge);
+                }
             } else {
                 setTimeout(() => processFrame(), 250);
             }
@@ -147,9 +179,7 @@ class Main {
     }
 
     stopWebcam() {
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-        }
+        if (this.stream) this.stream.getTracks().forEach(track => track.stop());
     }
 }
 
