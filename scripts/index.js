@@ -1,5 +1,8 @@
+import init, { sign } from '../wasm/local_signer.js';
+
 class Main {
     constructor() {
+        init();
         this.intro = document.getElementById('intro');
         this.consentForm = document.getElementById('consent-form');
         this.loadingSection = document.getElementById('loading-section');
@@ -41,13 +44,13 @@ class Main {
                     this._nonce = event.data.nonce;
                     this._parentWillTakeControl = true;
                     this._livenessCheck = event.data.livenessCheck;
-                    console.log('livenessCheck', this._livenessCheck);
                     if(this._livenessCheck) {
                         this.promises = Promise.all([
                             this.promises,
                             faceapi.nets.faceRecognitionNet.loadFromUri('./models')
                         ]);
                     }
+                    this._cacheExpiresIn = event.data.cacheExpiresIn || 1000 * 60 * 60 * 24;
                 }
             });
             window.opener.postMessage({ type: 'check-parent-commandeer' }, '*');
@@ -264,7 +267,15 @@ class Main {
         
         setTimeout(() => {
             this.stopWebcam();
-            window.opener.postMessage({ type: 'age-estimation-result', age: age, nonce: this._nonce }, '*');
+            let result = {
+                age: age,
+                createdAt: Date.now(),
+                exp: Date.now() + this._cacheExpiresIn,
+            };
+            let base64UrlSafeResult = btoa(JSON.stringify(result));
+            let signature = sign(base64UrlSafeResult);
+            let token = base64UrlSafeResult + '.' + signature;
+            window.opener.postMessage({ type: 'age-estimation-result', age: age, token: token, nonce: this._nonce }, '*');
         }, 1000);
     }
 
