@@ -52,11 +52,11 @@ Opens the age estimator in a new tab and returns a Promise that resolves with th
     - When true, performs additional verification to ensure the user is present
     - Helps prevent spoofing attempts using photos
     - Default: false
-  - `cacheEnabled` (Boolean): Optional parameter to enable caching of age estimation results
+  - `enableCache` (Boolean): Optional parameter to enable caching of age estimation results
     - When true, the estimated age will be cached for future use
     - Default: false
-  - `cacheExpiresIn` (Number): Optional parameter to set the cache expiration time in hours
-    - Only used when cacheEnabled is true
+  - `cacheDuration` (Number): Optional parameter to determine the number of milliseconds the cached results will be stored for
+    - Only used when enableCache is true
     - Default: 24 hours
 
 ##### Returns

@@ -1,4 +1,4 @@
-const CACHE_KEY = 'uv-age-estimation-token';
+const CACHE_KEY = 'uvae-token';
 
 class AgeEstimator {
     constructor() {
@@ -16,6 +16,7 @@ class AgeEstimator {
      * @param {Object} params - The parameters for the age estimation
      * @param {boolean} params.livenessCheck - Whether to also perform a liveness check on the user (optional)
      * @param {boolean} params.enableCache - Whether to enable caching of the age estimation (optional)
+     * @param {number} params.cacheDuration - The duration of the cache in milliseconds (optional)
      * @returns {Promise} Resolves with the estimated age on success, rejects on error
      */
     async estimateAge(params = {}) {
@@ -42,7 +43,7 @@ class AgeEstimator {
             const url = params.localTesting ? '../index.html' : 'https://universal-verify.github.io/age-estimator/';
             const origin = params.localTesting ? window.location.origin : 'https://universal-verify.github.io';
             const livenessCheck = params.livenessCheck || false;
-            const cacheExpiresIn = params.cacheExpiresIn || 1000 * 60 * 60 * 24;
+            const cacheDuration = params.cacheDuration || 1000 * 60 * 60 * 24;
             const newTab = window.open(url, '_blank');
 
             if (!newTab) {
@@ -87,7 +88,8 @@ class AgeEstimator {
                     newTab.close();
                     cleanup();
                 } else if (event.data.type === 'check-parent-commandeer') {
-                    newTab.postMessage({ type: 'confirm-parent-commandeer', nonce, livenessCheck, cacheExpiresIn }, origin);
+                    let origin = window.location.origin;
+                    newTab.postMessage({ type: 'confirm-parent-commandeer', nonce, livenessCheck, cacheDuration, origin }, origin);
                 }
             }
 
@@ -161,6 +163,8 @@ class AgeEstimator {
         const result = JSON.parse(atob(base64UrlSafeResult));
         if(result.exp < Date.now()) {
             throw new Error('EXPIRED');
+        } else if(result.sub !== simpleHash(navigator.userAgent + window.location.origin)) {
+            throw new Error('INVALID_SUB');
         }
         const verified = await crypto.subtle.verify(
             { name: 'RSA-PSS', saltLength: 32 },
@@ -180,6 +184,15 @@ function hexToArrayBuffer(hex) {
       bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
     }
     return bytes.buffer;
+}
+
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return hash;
 }
 
 const ageEstimator = new AgeEstimator();

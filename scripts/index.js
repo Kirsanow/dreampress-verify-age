@@ -1,4 +1,5 @@
 import init, { sign } from '../wasm/local_signer.js';
+import disableDevtool from 'https://cdn.jsdelivr.net/npm/disable-devtool@0.3.8/+esm';
 
 class Main {
     constructor() {
@@ -44,13 +45,14 @@ class Main {
                     this._nonce = event.data.nonce;
                     this._parentWillTakeControl = true;
                     this._livenessCheck = event.data.livenessCheck;
+                    this._openerOrigin = event.data.origin;
                     if(this._livenessCheck) {
                         this.promises = Promise.all([
                             this.promises,
                             faceapi.nets.faceRecognitionNet.loadFromUri('./models')
                         ]);
                     }
-                    this._cacheExpiresIn = event.data.cacheExpiresIn || 1000 * 60 * 60 * 24;
+                    this._cacheDuration = event.data.cacheDuration || 1000 * 60 * 60 * 24;
                 }
             });
             window.opener.postMessage({ type: 'check-parent-commandeer' }, '*');
@@ -103,7 +105,16 @@ class Main {
                 return;
             }
 
-            this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoInputs = devices.filter(device => device.kind === 'videoinput');
+            for(const device of videoInputs) {
+                if(!/obs|snap|manycam|virtual|v4l2|camtwist|splitcam|webcammax|youcam/i.test(device.label)) {
+                    this.stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: device.deviceId } });
+                    break;
+                }
+            };
+            if(!this.stream) throw new Error('No webcam found');
             this.videoElement.onloadedmetadata = () => {
                 this.videoElement.play();
                 this.startAgeEstimation();
@@ -144,17 +155,26 @@ class Main {
                         lastDetection = detection;
                     }
                     const age = Math.round(detection.age);
+                    let leftEye = detection.landmarks.getLeftEye()[0].x;
+                    let rightEye = detection.landmarks.getRightEye()[0].x;
+                    let eyeDistance = Math.abs(rightEye - leftEye);
+                    let nose = detection.landmarks.getNose()[4].x;
+                    let lookingStraight = Math.abs(nose - (leftEye + rightEye) / 2) < eyeDistance * 0.125;
 
                     // Update the processing text with results
                     this.webcamSection.querySelector('p').textContent = 'Processing age estimation...';
 
-                    if(detection.detection.score > 0.9) {
-                        highProbabilityAges.push({ age, score: detection.detection.score });
-                        lowProbabilityAges.push({ age, score: detection.detection.score });
-                    } else if(detection.detection.score > 0.75) {
-                        lowProbabilityAges.push({ age, score: detection.detection.score });
+                    if(lookingStraight) {
+                        if(detection.detection.score > 0.9) {
+                            highProbabilityAges.push({ age, score: detection.detection.score });
+                            lowProbabilityAges.push({ age, score: detection.detection.score });
+                        } else if(detection.detection.score > 0.75) {
+                            lowProbabilityAges.push({ age, score: detection.detection.score });
+                        } else {
+                            this.webcamSection.querySelector('p').textContent = 'Please ensure your face is clearly visible in the camera view.';
+                        }
                     } else {
-                        this.webcamSection.querySelector('p').textContent = 'Please ensure your face is clearly visible in the camera view.';
+                        this.webcamSection.querySelector('p').textContent = 'Please ensure you are looking straight at the camera.';
                     }
                 } else {
                     this.webcamSection.querySelector('p').textContent = 'No face detected. Please position your face in the camera view.';
@@ -217,17 +237,22 @@ class Main {
                     //check if the face is looking to the left or right
                     let leftEye = detection.landmarks.getLeftEye()[0].x;
                     let rightEye = detection.landmarks.getRightEye()[0].x;
-                    let nose = detection.landmarks.getNose()[0].x;
-                    if(direction == 'to your left' && nose < leftEye) {//looking left
+                    let eyeDistance = Math.abs(rightEye - leftEye);
+                    let nose = detection.landmarks.getNose()[4].x;
+                    let lookingLeft = nose < leftEye || Math.abs(leftEye - nose) < eyeDistance * 0.25;
+                    let lookingRight = nose > rightEye || Math.abs(rightEye - nose) < eyeDistance * 0.25;
+                    let lookingStraight = Math.abs(nose - (leftEye + rightEye) / 2) < eyeDistance * 0.125;
+
+                    if(direction == 'to your left' && lookingLeft) {//looking left
                         direction = 'to your right';
-                    } else if(direction == 'to your left' && nose > rightEye) {//looking left flipped
+                    } else if(direction == 'to your left' && lookingRight) {//looking left flipped
                         direction = 'to your right';
                         flipped = true;
-                    } else if(direction == 'to your right' && !flipped && nose > rightEye) {//looking right
+                    } else if(direction == 'to your right' && !flipped && lookingRight) {//looking right
                         direction = 'straight';
-                    } else if(direction == 'to your right' && flipped && nose < leftEye) {//looking right flipped
+                    } else if(direction == 'to your right' && flipped && lookingLeft) {//looking right flipped
                         direction = 'straight';
-                    } else if(direction == 'straight' && detection.detection.score > 0.85){
+                    } else if(direction == 'straight' && detection.detection.score > 0.85 && lookingStraight){
                         let livenessFaceDescriptor = detection.descriptor;
                         let livenessScore = faceapi.euclideanDistance(this._ageFaceDescriptor, livenessFaceDescriptor);
                         if(livenessScore < 0.6) {
@@ -270,7 +295,8 @@ class Main {
             let result = {
                 age: age,
                 createdAt: Date.now(),
-                exp: Date.now() + this._cacheExpiresIn,
+                exp: Date.now() + this._cacheDuration,
+                sub: simpleHash(navigator.userAgent + this._openerOrigin),
             };
             let base64UrlSafeResult = btoa(JSON.stringify(result));
             let signature = sign(base64UrlSafeResult);
@@ -290,6 +316,17 @@ class Main {
         if (this.stream) this.stream.getTracks().forEach(track => track.stop());
     }
 }
+
+function simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return hash;
+}
+
+disableDevtool();
 
 let main = new Main();
 export default main;
