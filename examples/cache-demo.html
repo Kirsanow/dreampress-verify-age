@@ -142,7 +142,7 @@
         import ageEstimator from '../scripts/age-estimator.js';
 
         const queryParams = new URLSearchParams(window.location.search);
-        const minAge = queryParams.get('minAge') || 18;
+        const minAge = Number(queryParams.get('minAge')) || 18;
         const ageVerificationOverlay = document.querySelector('#age-verification-overlay');
         const verifyAgeButton = document.querySelector('#verify-age-button');
 

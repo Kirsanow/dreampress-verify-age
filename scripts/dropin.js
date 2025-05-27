@@ -213,14 +213,10 @@ class Dropin {
 
     setConfig() {
         let globalConfig = window.uvaeConfig || {};
+        this._cacheDuration = globalConfig.cacheDuration || 1000 * 60 * 60 * 24;
         this._minAge = Number.isInteger(globalConfig.minAge) ? globalConfig.minAge : 18;
         this._primaryColor = globalConfig.primaryColor || defaultColor;
         this._zIndex = globalConfig.zIndex || '9999999';
-    }
-
-    async tempInit() {
-        if(await this.hasValidToken()) return;
-        this.setupAgeGate();
     }
 
     async hasValidToken() {
@@ -354,6 +350,7 @@ class Dropin {
         try {
             const age = await AgeEstimator.estimateAge({
                 enableCache: true,
+                cacheDuration: this._cacheDuration,
                 livenessCheck: true,
                 localTesting: window.location.origin.includes('localhost')
             });
