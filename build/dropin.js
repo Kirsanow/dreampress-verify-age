@@ -322,7 +322,6 @@
             innerContent.appendChild(button);
             content.appendChild(innerContent);
             this._ageGate.appendChild(content);
-            this._ageGate.id = 'age-verification-overlay';
             document.documentElement.appendChild(this._ageGate);
 
             // Create success overlay
@@ -330,23 +329,78 @@
             Object.assign(this._successOverlay.style, {
                 position: 'fixed',
                 inset: '0',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(12px)',
                 zIndex: this._zIndex,
-                display: 'flex',
+                display: 'none',
                 alignItems: 'center',
                 justifyContent: 'center'
             });
 
             const successContent = document.createElement('div');
-            successContent.style.textAlign = 'center';
-            successContent.style.color = 'white';
-            successContent.textContent = 'Thank you for verifying your age.';
+            Object.assign(successContent.style, {
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(24px)',
+                borderRadius: '12px',
+                padding: '32px',
+                maxWidth: '448px',
+                width: '100%',
+                margin: '0 16px',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                textAlign: 'center'
+            });
 
+            const successIcon = document.createElement('div');
+            successIcon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+            Object.assign(successIcon.style, {
+                color: '#10B981', // green-500
+                marginBottom: '1rem',
+                width: '36px',
+                height: '36px',
+                margin: '0 auto 1rem auto'
+            });
+
+            const successTitle = document.createElement('h2');
+            Object.assign(successTitle.style, {
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                color: 'white',
+                marginBottom: '1rem'
+            });
+            successTitle.textContent = 'Age Verified';
+
+            const successMessage = document.createElement('p');
+            Object.assign(successMessage.style, {
+                color: '#d1d5db' // gray-300
+            });
+            successMessage.textContent = 'Thank you for verifying your age.';
+
+            successContent.appendChild(successIcon);
+            successContent.appendChild(successTitle);
+            successContent.appendChild(successMessage);
             this._successOverlay.appendChild(successContent);
+            document.documentElement.appendChild(this._successOverlay);
 
             // Add event listener for the verify button
             button.addEventListener('click', () => this._handleVerifyClick());
+
+            if(this._observer) this._observer.disconnect();
+            this._observer = new MutationObserver(async mutations => {
+                mutations.forEach(async mutation => {
+                    mutation.removedNodes.forEach(async removedNode => {
+                        if(removedNode === this._ageGate) {
+                            let valid = await this.hasValidToken();
+                            if(!valid) this.setupAgeGate();
+                        }
+                    });
+                    // Detect attribute (style/class) changes
+                    if (mutation.type === 'attributes' && mutation.target === this._ageGate) {
+                        let valid = await this.hasValidToken();
+                        if(!valid) this.setupAgeGate();
+                    }
+                });
+            });
+            this._observer.observe(this._ageGate.parentElement, { childList: true });
+            this._observer.observe(this._ageGate, { attributes: true, attributeFilter: ['style', 'class'] });
         }
 
         async _handleVerifyClick() {
@@ -366,7 +420,7 @@
                     this._ageGate.style.display = 'none';
                     setTimeout(() => {
                         this._successOverlay.style.display = 'none';
-                    }, 4000);
+                    }, 3000);
                 }
             } catch(error) {
                 if(error === 'DIFFERENT_FACE_ERROR') {

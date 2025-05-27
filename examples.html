@@ -35,6 +35,33 @@
 
             <!-- Integration Methods -->
             <div class="space-y-8">
+                <!-- Dropin Method -->
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-code text-3xl text-blue-600 mr-4"></i>
+                        <h2 class="text-2xl font-semibold">Drop-in Script</h2>
+                    </div>
+                    <p class="text-gray-600 mb-6">
+                        By using the drop-in script, you can add age verification to your website without having to write any code.
+                    </p>
+                    <div class="space-y-4 mb-6">
+                        <label class="block">
+                            <span class="text-gray-700 font-medium">Select minimum age requirement for this demo:</span>
+                            <div class="mt-2 flex items-center">
+                                <input type="number" min="13" max="100" value="18" 
+                                    class="w-24 rounded-md border-2 border-gray-200 shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white px-1 py-1" 
+                                    id="dropin-age">
+                                <span class="ml-2 text-gray-500">years old</span>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="mt-6">
+                        <a href="./examples/dropin-demo.html" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors" id="dropin-demo-link">
+                            View Drop-in Demo
+                        </a>
+                    </div>
+                </div>
+
                 <!-- Popup Method -->
                 <div class="bg-white rounded-lg shadow-lg p-8">
                     <div class="flex items-center mb-4">
@@ -117,33 +144,6 @@
                         </a>
                     </div>
                 </div>
-
-                <!-- Dropin Method -->
-                <div class="bg-white rounded-lg shadow-lg p-8">
-                    <div class="flex items-center mb-4">
-                        <i class="fas fa-code text-3xl text-blue-600 mr-4"></i>
-                        <h2 class="text-2xl font-semibold">Drop-in Script</h2>
-                    </div>
-                    <p class="text-gray-600 mb-6">
-                        By using the drop-in script, you can add age verification to your website without having to write any code.
-                    </p>
-                    <div class="space-y-4 mb-6">
-                        <label class="block">
-                            <span class="text-gray-700 font-medium">Select minimum age requirement for this demo:</span>
-                            <div class="mt-2 flex items-center">
-                                <input type="number" min="13" max="100" value="18" 
-                                    class="w-24 rounded-md border-2 border-gray-200 shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white px-1 py-1" 
-                                    id="dropin-age">
-                                <span class="ml-2 text-gray-500">years old</span>
-                            </div>
-                        </label>
-                    </div>
-                    <div class="mt-6">
-                        <a href="./examples/dropin-demo.html" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors" id="dropin-demo-link">
-                            View Drop-in Demo
-                        </a>
-                    </div>
-                </div>
             </div>
 
             <!-- Footer -->
@@ -156,22 +156,22 @@
     <script>
         // Update demo links with age parameters
         function updateDemoLinks() {
+            const dropinAge = document.getElementById('dropin-age').value;
             const newTabAge = document.getElementById('new-tab-age').value;
             const cacheAge = document.getElementById('cache-age').value;
             const livenessAge = document.getElementById('liveness-age').value;
-            const dropinAge = document.getElementById('dropin-age').value;
             
+            document.getElementById('dropin-demo-link').href = `./examples/dropin-demo.html?minAge=${dropinAge}`;
             document.getElementById('new-tab-demo-link').href = `./examples/basic-demo.html?minAge=${newTabAge}`;
             document.getElementById('cache-demo-link').href = `./examples/cache-demo.html?minAge=${cacheAge}`;
             document.getElementById('liveness-demo-link').href = `./examples/liveness-demo.html?minAge=${livenessAge}`;
-            document.getElementById('dropin-demo-link').href = `./examples/dropin-demo.html?minAge=${dropinAge}`;
         }
 
         // Add event listeners to age inputs
+        document.getElementById('dropin-age').addEventListener('change', updateDemoLinks);
         document.getElementById('new-tab-age').addEventListener('change', updateDemoLinks);
         document.getElementById('cache-age').addEventListener('change', updateDemoLinks);
         document.getElementById('liveness-age').addEventListener('change', updateDemoLinks);
-        document.getElementById('dropin-age').addEventListener('change', updateDemoLinks);
 
         // Initialize links
         updateDemoLinks();

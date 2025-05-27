@@ -139,7 +139,7 @@
     </main>
 
     <script type="module">
-        import ageEstimator from '../scripts/age-estimator.js';
+        import ageEstimator from 'https://cdn.jsdelivr.net/npm/age-estimator@0.0.6/build/age-estimator.js';
 
         const queryParams = new URLSearchParams(window.location.search);
         const minAge = Number(queryParams.get('minAge')) || 18;
