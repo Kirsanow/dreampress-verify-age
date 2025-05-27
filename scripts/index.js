@@ -1,5 +1,5 @@
 import init, { sign } from '../wasm/local_signer.js';
-import disableDevtool from 'https://cdn.jsdelivr.net/npm/disable-devtool@0.3.8/+esm';
+//import disableDevtool from 'https://cdn.jsdelivr.net/npm/disable-devtool@0.3.8/+esm';
 
 class Main {
     constructor() {
@@ -326,7 +326,7 @@ function simpleHash(str) {
     return hash;
 }
 
-disableDevtool();
+//disableDevtool();
 
 let main = new Main();
 export default main;
