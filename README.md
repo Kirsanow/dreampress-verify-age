@@ -6,10 +6,6 @@ A privacy-focused tool for estimating user age using local facial recognition. A
 
 Want to just drop a <script src="..."></script> tag into your html pages to add age gates without worrying about implementation? [Read here](./DROPIN_README.md)
 
-## Live Demo
-
-Try the age estimator directly: [https://universal-verify.github.io/age-estimator/](https://universal-verify.github.io/age-estimator/)
-
 ## Integration Examples
 
 See how to integrate the age estimator into your website: [https://universal-verify.github.io/age-estimator/examples](https://universal-verify.github.io/age-estimator/examples)
