@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Age Verification - DreamPress</title>
     <link rel="stylesheet" href="styles/main.css" />
     <style>
@@ -179,7 +181,15 @@
         </p>
 
         <div id="video-container">
-          <video id="video" autoplay muted playsinline webkit-playsinline></video>
+          <video 
+            id="video" 
+            autoplay 
+            muted 
+            playsinline 
+            webkit-playsinline 
+            controls="false"
+            style="display: inline-block; max-width: 100%; height: auto;"
+          ></video>
           <div class="camera-overlay"></div>
           <canvas id="canvas"></canvas>
         </div>
@@ -353,10 +363,17 @@
           
           stream = await navigator.mediaDevices.getUserMedia(constraints);
           
-          // iOS specific video setup
+          // iOS specific video setup - very aggressive
           if (isIOS) {
             video.setAttribute('playsinline', 'true');
             video.setAttribute('webkit-playsinline', 'true');
+            video.setAttribute('controls', 'false');
+            video.playsInline = true;
+            video.webkitPlaysInline = true;
+            video.style.width = '100%';
+            video.style.height = 'auto';
+            video.style.maxWidth = '100%';
+            video.style.display = 'inline-block';
           }
 
           video.srcObject = stream;
