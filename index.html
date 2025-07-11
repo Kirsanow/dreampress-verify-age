@@ -104,6 +104,9 @@
         transform: scaleX(-1);
         -webkit-transform: scaleX(-1);
         object-fit: cover;
+        -webkit-playsinline: true;
+        playsinline: true;
+        background: #000;
       }
 
       #canvas {
@@ -176,7 +179,7 @@
         </p>
 
         <div id="video-container">
-          <video id="video" autoplay muted></video>
+          <video id="video" autoplay muted playsinline webkit-playsinline></video>
           <div class="camera-overlay"></div>
           <canvas id="canvas"></canvas>
         </div>
@@ -322,36 +325,61 @@
         const statusEl = document.getElementById("status");
 
         try {
-          // Request camera access with mobile-friendly constraints
-          const constraints = {
-            video: {
-              facingMode: "user",
-              width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 }
-            },
-            audio: false
-          };
+          // iOS Safari specific handling first
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
           
-          // iOS Safari specific handling
-          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-            constraints.video = { facingMode: "user" };
+          let constraints;
+          if (isIOS) {
+            // Minimal constraints for iOS Safari
+            constraints = {
+              video: { 
+                facingMode: "user",
+                width: 640,
+                height: 480
+              },
+              audio: false
+            };
+          } else {
+            // More detailed constraints for other browsers
+            constraints = {
+              video: {
+                facingMode: "user",
+                width: { min: 640, ideal: 1280, max: 1920 },
+                height: { min: 480, ideal: 720, max: 1080 }
+              },
+              audio: false
+            };
           }
           
           stream = await navigator.mediaDevices.getUserMedia(constraints);
+          
+          // iOS specific video setup
+          if (isIOS) {
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+          }
 
           video.srcObject = stream;
 
-          // Show video and controls
-          videoContainer.style.display = "block";
-          instructionText.style.display = "block";
-          verifyBtn.style.display = "none";
-          captureBtn.style.display = "inline-block";
-          cancelBtn.style.display = "inline-block";
+          // Wait for video to be ready
+          video.onloadedmetadata = () => {
+            video.play().then(() => {
+              // Show video and controls after video is playing
+              videoContainer.style.display = "block";
+              instructionText.style.display = "block";
+              verifyBtn.style.display = "none";
+              captureBtn.style.display = "inline-block";
+              cancelBtn.style.display = "inline-block";
 
-          statusEl.style.display = "block";
-          statusEl.className = "status-message status-loading";
-          statusEl.textContent =
-            "Camera ready. Position your face and click Verify Age.";
+              statusEl.style.display = "block";
+              statusEl.className = "status-message status-loading";
+              statusEl.textContent =
+                "Camera ready. Position your face and click Verify Age.";
+            }).catch(error => {
+              console.error('Video play error:', error);
+              showError('Unable to start camera preview.');
+            });
+          };
         } catch (error) {
           console.error("Camera error:", error);
           showError(
