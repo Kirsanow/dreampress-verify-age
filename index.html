@@ -670,20 +670,13 @@
           return;
         }
 
-        // Build redirect URL with parameters
+        // Build redirect URL with essential parameters only
         const separator = callbackUrl.includes("?") ? "&" : "?";
         let redirectUrl = `${callbackUrl}${separator}verified=${verified}`;
 
         if (userId) {
           redirectUrl += `&user_id=${userId}`;
         }
-
-        if (reason) {
-          redirectUrl += `&reason=${reason}`;
-        }
-
-        // Add timestamp
-        redirectUrl += `&timestamp=${Date.now()}`;
 
         // Redirect
         window.location.href = redirectUrl;
