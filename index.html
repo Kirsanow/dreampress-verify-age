@@ -233,7 +233,10 @@
           class="instruction-text"
           style="display: none"
         >
-          Position your face within the circle
+          Position your face within the circle<br>
+          <small style="color: #9ca3af; font-size: 14px;">
+            Keep about arm's length from camera
+          </small>
         </div>
 
         <div id="button-container">
@@ -425,7 +428,7 @@
               statusEl.style.display = "block";
               statusEl.className = "status-message status-loading";
               statusEl.textContent =
-                "Camera ready. Position your face and click Verify Age.";
+                "Camera ready. Position yourself at arm's length and click Verify Age.";
             }).catch(error => {
               console.error('Video play error:', error);
               showError('Unable to start camera preview.');
@@ -480,18 +483,24 @@
         ctx.restore();
 
         try {
-          // Detect faces with age
-          const detections = await faceapi
+          // Add timeout for face detection to prevent infinite loading
+          const detectionPromise = faceapi
             .detectAllFaces(canvas, new faceapi.TinyFaceDetectorOptions())
             .withFaceLandmarks()
             .withAgeAndGender();
+          
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('DETECTION_TIMEOUT')), 10000)
+          );
+          
+          const detections = await Promise.race([detectionPromise, timeoutPromise]);
 
           console.log("Detections:", detections);
 
           if (detections.length === 0) {
             statusEl.className = "status-message status-error";
             statusEl.textContent =
-              "No face detected. Please ensure your face is clearly visible.";
+              "No face detected. Please move back slightly and ensure your entire face is visible in the frame.";
             captureBtn.disabled = false;
             captureBtn.textContent = "Verify Age";
             return;
@@ -501,6 +510,33 @@
             statusEl.className = "status-message status-error";
             statusEl.textContent =
               "Multiple faces detected. Please ensure only one person is visible.";
+            captureBtn.disabled = false;
+            captureBtn.textContent = "Verify Age";
+            return;
+          }
+
+          // Check if face is too large (user too close)
+          const detection = detections[0];
+          const faceWidth = detection.detection.box.width;
+          const faceHeight = detection.detection.box.height;
+          const canvasWidth = canvas.width;
+          const canvasHeight = canvas.height;
+          
+          // If face takes up more than 70% of frame width or height, it's too close
+          if (faceWidth > canvasWidth * 0.7 || faceHeight > canvasHeight * 0.7) {
+            statusEl.className = "status-message status-error";
+            statusEl.textContent =
+              "Please move back a bit. Your face is too close to the camera.";
+            captureBtn.disabled = false;
+            captureBtn.textContent = "Verify Age";
+            return;
+          }
+          
+          // Check if face is too small (user too far)
+          if (faceWidth < canvasWidth * 0.15 || faceHeight < canvasHeight * 0.15) {
+            statusEl.className = "status-message status-error";
+            statusEl.textContent =
+              "Please move closer. Your face appears too small in the frame.";
             captureBtn.disabled = false;
             captureBtn.textContent = "Verify Age";
             return;
@@ -536,7 +572,14 @@
           }
         } catch (error) {
           console.error("Age detection error:", error);
-          showError("Failed to analyze age. Please try again.");
+          
+          if (error.message === 'DETECTION_TIMEOUT') {
+            statusEl.className = "status-message status-error";
+            statusEl.textContent = "Detection is taking too long. Please adjust your position and try again.";
+          } else {
+            showError("Failed to analyze age. Please try again.");
+          }
+          
           captureBtn.disabled = false;
           captureBtn.textContent = "Verify Age";
         }
