@@ -11,7 +11,8 @@
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
-        background-color: #f5f5f5;
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        color: #e5e5e5;
         margin: 0;
         padding: 0;
         min-height: 100vh;
@@ -21,10 +22,12 @@
       }
 
       .verification-container {
-        background: white;
+        background: rgba(42, 42, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         max-width: 500px;
         width: 90%;
         text-align: center;
@@ -33,7 +36,10 @@
       .logo {
         font-size: 2rem;
         font-weight: bold;
-        color: #333;
+        background: linear-gradient(45deg, #d946ef, #f43f5e);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         margin-bottom: 1rem;
       }
 
@@ -45,50 +51,60 @@
       }
 
       .status-loading {
-        background-color: #e3f2fd;
-        color: #1976d2;
+        background: rgba(217, 70, 239, 0.15);
+        border: 1px solid rgba(217, 70, 239, 0.3);
+        color: #d946ef;
       }
 
       .status-success {
-        background-color: #e8f5e9;
-        color: #388e3c;
+        background: rgba(34, 197, 94, 0.15);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #22c55e;
       }
 
       .status-error {
-        background-color: #ffebee;
-        color: #c62828;
+        background: rgba(244, 63, 94, 0.15);
+        border: 1px solid rgba(244, 63, 94, 0.3);
+        color: #f43f5e;
       }
 
       .verify-button {
-        background-color: #1976d2;
+        background: linear-gradient(45deg, #d946ef, #f43f5e);
         color: white;
         border: none;
         padding: 12px 32px;
         font-size: 16px;
-        border-radius: 8px;
+        border-radius: 12px;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: all 0.3s ease;
         margin: 10px;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(217, 70, 239, 0.3);
       }
 
       .verify-button:hover {
-        background-color: #1565c0;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(217, 70, 239, 0.4);
       }
 
       .verify-button:disabled {
-        background-color: #ccc;
+        background: #666;
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
       }
 
       .skip-link {
         margin-top: 1rem;
         display: inline-block;
-        color: #666;
+        color: #9ca3af;
         text-decoration: none;
         font-size: 14px;
+        transition: color 0.3s ease;
       }
 
       .skip-link:hover {
+        color: #d946ef;
         text-decoration: underline;
       }
 
@@ -122,15 +138,33 @@
         transform: translate(-50%, -50%);
         width: 250px;
         height: 250px;
-        border: 3px solid #1976d2;
+        border: 3px solid #d946ef;
         border-radius: 50%;
         pointer-events: none;
+        box-shadow: 0 0 20px rgba(217, 70, 239, 0.5);
+        animation: pulse 2s infinite;
+      }
+      
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
       }
 
       .instruction-text {
         margin: 10px 0;
         font-size: 16px;
-        color: #666;
+        color: #9ca3af;
+      }
+      
+      h1 {
+        color: #f3f4f6;
+        margin-bottom: 1rem;
+      }
+      
+      p {
+        color: #d1d5db;
+        line-height: 1.6;
       }
       
       /* Mobile-specific styles */
