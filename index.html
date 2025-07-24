@@ -171,29 +171,90 @@
       
       /* Mobile-specific styles */
       @media (max-width: 768px) {
+        body {
+          padding: 10px;
+        }
+        
         .verification-container {
           padding: 1rem;
           margin: 10px;
+          max-height: 95vh;
+          overflow-y: auto;
+        }
+        
+        h1 {
+          font-size: 1.5rem;
+          margin-bottom: 0.5rem;
+        }
+        
+        .logo {
+          font-size: 1.5rem;
+          margin-bottom: 0.5rem;
+        }
+        
+        p {
+          margin: 0.5rem 0;
         }
         
         #video-container {
           max-width: 100%;
           margin: 10px auto;
+          height: 300px;
+          position: relative;
+        }
+        
+        #video {
+          height: 100%;
+          object-fit: cover;
         }
         
         .verify-button {
           padding: 14px 28px;
           font-size: 18px;
-          margin: 8px;
+          margin: 5px;
           min-height: 48px;
           -webkit-appearance: none;
-          border-radius: 12px;
+          border-radius: 24px;
         }
         
         .camera-overlay {
-          width: 200px;
-          height: 200px;
+          width: 180px;
+          height: 180px;
           border-width: 2px;
+        }
+        
+        #instruction-text {
+          margin: 5px 0;
+        }
+        
+        /* Hide FAQ on mobile when camera is active */
+        #video-container:not([style*="none"]) ~ details {
+          display: none;
+        }
+        
+        /* Mobile layout adjustments when camera is active */
+        body:has(#video-container:not([style*="none"])) .verification-container {
+          display: flex;
+          flex-direction: column;
+          height: 90vh;
+          max-height: 90vh;
+          overflow: hidden;
+        }
+        
+        /* Fixed button container when camera is active */
+        #video-container:not([style*="none"]) ~ * #button-container,
+        #video-container:not([style*="none"]) ~ #button-container {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(42, 42, 42, 0.98);
+          padding: 12px 20px;
+          border-radius: 24px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+          z-index: 100;
+          display: flex;
+          gap: 10px;
         }
       }
     </style>
@@ -246,7 +307,7 @@
           </div>
         </div>
 
-        <div id="button-container">
+        <div id="button-container" style="text-align: center;">
           <button
             id="verify-btn"
             class="verify-button"
@@ -268,7 +329,7 @@
             id="cancel-btn"
             class="verify-button"
             onclick="cancelVerification()"
-            style="display: none"
+            style="display: none; background: #666;"
           >
             Cancel
           </button>
