@@ -96,19 +96,6 @@
         box-shadow: none;
       }
 
-      .skip-link {
-        margin-top: 1rem;
-        display: inline-block;
-        color: #9ca3af;
-        text-decoration: none;
-        font-size: 14px;
-        transition: color 0.3s ease;
-      }
-
-      .skip-link:hover {
-        color: rgb(255, 0, 64);
-        text-decoration: underline;
-      }
 
       #video-container {
         display: none;
@@ -335,16 +322,6 @@
           </button>
         </div>
 
-        <br />
-
-        <a
-          href="#"
-          id="skip-link"
-          class="skip-link"
-          onclick="handleSkip(event)"
-        >
-          I'm not in the UK
-        </a>
         
         <details style="margin-top: 2rem; text-align: left; max-width: 400px; margin-left: auto; margin-right: auto;">
           <summary style="cursor: pointer; color: #9ca3af; font-size: 14px; outline: none;">
@@ -718,17 +695,6 @@
         captureBtn.textContent = "Verify Age";
       }
 
-      // Handle skip link
-      function handleSkip(event) {
-        event.preventDefault();
-        if (
-          confirm(
-            "By clicking OK, you confirm that you are not located in the UK."
-          )
-        ) {
-          redirectToCallback(true, "skipped");
-        }
-      }
 
       // Show error message
       function showError(message) {
