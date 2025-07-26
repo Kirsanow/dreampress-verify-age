@@ -348,9 +348,9 @@
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
     <script>
-      // Get URL parameters
+      // Get URL parameters with proper decoding
       const urlParams = new URLSearchParams(window.location.search);
-      const callbackUrl = urlParams.get("callback_url") || "";
+      const callbackUrl = decodeURIComponent(urlParams.get("callback_url") || "");
       const userId = urlParams.get("user_id") || "";
 
       let stream = null;
@@ -723,12 +723,13 @@
           return;
         }
 
-        // Build redirect URL with essential parameters only
-        const separator = callbackUrl.includes("?") ? "&" : "?";
-        let redirectUrl = `${callbackUrl}${separator}verified=${verified}`;
-
+        // Build redirect URL with proper parameter handling
+        const url = new URL(callbackUrl);
+        
+        // Add our verification parameters
+        url.searchParams.set('verified', verified);
         if (userId) {
-          redirectUrl += `&user_id=${userId}`;
+          url.searchParams.set('user_id', userId);
         }
 
         // Add security hash to prevent URL tampering
@@ -738,10 +739,11 @@
         // Simple hash function (in production, use a proper secret key)
         const hash = btoa(hashData).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16);
         
-        redirectUrl += `&timestamp=${timestamp}&hash=${hash}`;
+        url.searchParams.set('timestamp', timestamp);
+        url.searchParams.set('hash', hash);
 
-        // Redirect
-        window.location.href = redirectUrl;
+        // Redirect with properly formatted URL
+        window.location.href = url.toString();
       }
 
       // Check for cached verification (within 24 hours)
