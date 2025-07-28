@@ -37,10 +37,11 @@ console.log("Time check:", {
   isRecent: isRecent,
 });
 
-if (receivedHash === expectedHash && isRecent) {
-  console.log("Hash verification PASSED");
+// Check THREE things: hash valid, time recent, AND verification successful
+if (receivedHash === expectedHash && isRecent && verified === 'true') {
+  console.log("Hash verification PASSED and age verified");
   bubble_fn_age("true");
 } else {
-  console.log("Hash verification FAILED");
+  console.log("Hash verification FAILED or age not verified. Verified:", verified);
   bubble_fn_age("false");
 }

@@ -159,89 +159,161 @@
       /* Mobile-specific styles */
       @media (max-width: 768px) {
         body {
-          padding: 10px;
+          padding: 5px;
+          height: 100vh;
+          overflow: hidden;
         }
         
         .verification-container {
           padding: 1rem;
-          margin: 10px;
-          max-height: 95vh;
-          overflow-y: auto;
-        }
-        
-        h1 {
-          font-size: 1.5rem;
-          margin-bottom: 0.5rem;
+          margin: 0;
+          height: 100vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
         
         .logo {
-          font-size: 1.5rem;
-          margin-bottom: 0.5rem;
+          font-size: 1.2rem;
+          margin-bottom: 0.3rem;
+        }
+        
+        h1 {
+          font-size: 1.3rem;
+          margin: 0.3rem 0;
         }
         
         p {
-          margin: 0.5rem 0;
+          margin: 0.3rem 0;
+          font-size: 13px;
+        }
+        
+        /* Main content area that can scroll */
+        .content-area {
+          flex: 1;
+          overflow-y: auto;
+          padding-bottom: 120px; /* Space for fixed buttons */
+        }
+        
+        /* When camera IS active - hide header content */
+        .verification-container:has(#video-container:not([style*="none"])) .logo,
+        .verification-container:has(#video-container:not([style*="none"])) h1,
+        .verification-container:has(#video-container:not([style*="none"])) p:not(#instruction-text *) {
+          display: none;
         }
         
         #video-container {
-          max-width: 100%;
-          margin: 10px auto;
-          height: 300px;
+          width: 100%;
+          height: 65vh;
+          margin: 10px auto 0;
           position: relative;
+          border-radius: 16px;
+          overflow: hidden;
+          flex-shrink: 0;
         }
         
         #video {
+          width: 100%;
           height: 100%;
           object-fit: cover;
-        }
-        
-        .verify-button {
-          padding: 14px 28px;
-          font-size: 18px;
-          margin: 5px;
-          min-height: 48px;
-          -webkit-appearance: none;
-          border-radius: 24px;
+          border-radius: 16px;
         }
         
         .camera-overlay {
-          width: 180px;
-          height: 180px;
+          width: 140px;
+          height: 140px;
           border-width: 2px;
         }
         
         #instruction-text {
-          margin: 5px 0;
+          margin: 10px 0;
+          font-size: 14px;
+          text-align: center;
         }
         
-        /* Hide FAQ on mobile when camera is active */
+        #instruction-text div {
+          margin-top: 5px;
+          font-size: 11px;
+        }
+        
+        /* Button container - fixed at bottom when camera active */
+        #button-container {
+          position: fixed;
+          bottom: env(safe-area-inset-bottom, 15px);
+          left: 50%;
+          transform: translateX(-50%);
+          width: calc(100% - 30px);
+          max-width: 350px;
+          background: rgba(42, 42, 42, 0.95);
+          backdrop-filter: blur(10px);
+          padding: 12px;
+          border-radius: 20px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+          z-index: 1000;
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+        
+        /* Normal button position when camera not active */
+        #video-container[style*="none"] ~ #button-container {
+          position: static;
+          transform: none;
+          width: auto;
+          max-width: none;
+          background: transparent;
+          backdrop-filter: none;
+          box-shadow: none;
+          flex-direction: column;
+          align-items: center;
+          margin-top: 20px;
+        }
+        
+        .verify-button {
+          padding: 12px 18px;
+          font-size: 15px;
+          margin: 3px;
+          min-height: 44px;
+          -webkit-appearance: none;
+          border-radius: 20px;
+          flex: 1;
+          max-width: 140px;
+          white-space: nowrap;
+        }
+        
+        /* Hide FAQ completely on mobile when camera is active */
         #video-container:not([style*="none"]) ~ details {
           display: none;
         }
         
-        /* Mobile layout adjustments when camera is active */
-        body:has(#video-container:not([style*="none"])) .verification-container {
-          display: flex;
-          flex-direction: column;
-          height: 90vh;
-          max-height: 90vh;
-          overflow: hidden;
+        /* Status message positioning */
+        #status {
+          margin: 10px 0;
+          font-size: 14px;
+          padding: 8px 12px;
+        }
+      }
+      
+      /* Extra small screens */
+      @media (max-width: 480px) {
+        .camera-overlay {
+          width: 120px;
+          height: 120px;
         }
         
-        /* Fixed button container when camera is active */
-        #video-container:not([style*="none"]) ~ * #button-container,
-        #video-container:not([style*="none"]) ~ #button-container {
-          position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(42, 42, 42, 0.98);
-          padding: 12px 20px;
-          border-radius: 24px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-          z-index: 100;
-          display: flex;
-          gap: 10px;
+        .verify-button {
+          font-size: 14px;
+          padding: 10px 14px;
+          min-height: 42px;
+          max-width: 120px;
+        }
+        
+        #video-container {
+          height: 60vh;
+        }
+        
+        .verification-container {
+          padding: 0.5rem;
         }
       }
     </style>
