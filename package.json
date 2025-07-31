@@ -1,36 +1,25 @@
 {
-  "name": "age-estimator",
-  "version": "0.0.6",
-  "description": "Easy to use tool to estimate users age",
-  "author": "kalegd",
-  "license": "MPL-2.0",
-  "main": "build/age-estimator.js",
+  "name": "dreampress-verify-age",
+  "private": true,
+  "version": "1.0.0",
   "type": "module",
-  "keywords": [
-    "age",
-    "verification"
-  ],
-  "homepage": "https://github.com/universal-verify/age-estimator#readme",
-  "bugs": {
-    "url": "https://github.com/universal-verify/age-estimator/issues"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/universal-verify/age-estimator.git"
-  },
+  "description": "Professional age verification for DreamPress",
   "scripts": {
-    "start": "http-server -c-1 -p 8001",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rollup -c --bundleConfigAsCjs",
-    "build:css": "tailwindcss -i ./styles/input.css -o ./styles/main.css --minify",
-    "watch:css": "tailwindcss -i ./styles/input.css -o ./styles/main.css --watch"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@rollup/plugin-terser": "^0.4.4",
-    "http-server": "^14.1.1",
-    "rollup": "^4.41.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "face-api.js": "^0.22.2"
   },
   "devDependencies": {
-    "tailwindcss": "^3.4.0"
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.0.3",
+    "tailwindcss": "^4.1.5",
+    "@tailwindcss/vite": "^4.1.5",
+    "vite": "^5.0.0"
   }
 }
