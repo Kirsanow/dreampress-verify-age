@@ -8,15 +8,24 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [callbackUrl, setCallbackUrl] = useState("");
   const [userId, setUserId] = useState("");
+  
+  // Feature flag for enabling redirects (set to false for testing)
+  const [enableRedirect, setEnableRedirect] = useState(false);
 
   useEffect(() => {
     // Parse URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const callback = urlParams.get("callback_url");
     const user = urlParams.get("user_id");
+    const redirect = urlParams.get("enable_redirect");
 
     if (callback) setCallbackUrl(decodeURIComponent(callback));
     if (user) setUserId(user);
+    
+    // Enable redirect if URL parameter is set or if callback URL exists
+    if (redirect === "true" || callback) {
+      setEnableRedirect(true);
+    }
 
     // Check if user is in UK
     // checkGeolocation();
@@ -86,7 +95,7 @@ function App() {
     );
   }
 
-  return <AgeVerification onComplete={handleVerificationComplete} />;
+  return <AgeVerification onComplete={handleVerificationComplete} enableRedirect={enableRedirect} />;
 }
 
 export default App;

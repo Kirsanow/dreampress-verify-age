@@ -2,18 +2,34 @@ import { useState, useRef, useEffect } from "react";
 import * as faceapi from "face-api.js";
 import Logo from "./Logo";
 
-export default function AgeVerification({ onComplete }) {
+export default function AgeVerification({ onComplete, enableRedirect = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [status, setStatus] = useState("");
   const [showCamera, setShowCamera] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
+  const [livenessCheck, setLivenessCheck] = useState(false);
+  const [livenessStep, setLivenessStep] = useState(0);
+  const [baseFaceDescriptor, setBaseFaceDescriptor] = useState(null);
+  const [lastDetection, setLastDetection] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
     loadModels();
+    
+    // Cleanup on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      if (videoRef.current?.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach((track) => track.stop());
+      }
+    };
   }, []);
 
   const loadModels = async () => {
@@ -22,12 +38,108 @@ export default function AgeVerification({ onComplete }) {
       await Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
         faceapi.nets.ageGenderNet.loadFromUri("/models"),
+        faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+        faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
       ]);
       setModelsLoaded(true);
       setStatus("Ready for verification");
     } catch (error) {
       console.error("Error loading models:", error);
       setStatus("Failed to load AI models");
+    }
+  };
+
+  const drawFaceOverlay = async () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    
+    const displaySize = { 
+      width: videoRef.current.videoWidth, 
+      height: videoRef.current.videoHeight 
+    };
+    
+    // Match canvas size to video
+    faceapi.matchDimensions(canvasRef.current, displaySize);
+    
+    const detections = await faceapi
+      .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks();
+    
+    // Clear previous drawings
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    let currentDetection = null;
+    
+    if (detections.length > 0) {
+      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      currentDetection = resizedDetections[0].detection.box;
+      setLastDetection(currentDetection);
+    }
+    
+    // Use current detection or last known good detection to reduce blinking
+    const detectionToUse = currentDetection || lastDetection;
+    
+    if (detectionToUse) {
+      // Get face bounding box
+      const box = detectionToUse;
+      const centerX = box.x + box.width / 2;
+      const centerY = box.y + box.height / 2;
+      const radius = Math.max(box.width, box.height) / 2 + 20;
+      
+      // Draw face circle with smooth appearance
+      ctx.strokeStyle = currentDetection ? '#4ADE80' : '#10B981';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = ctx.strokeStyle;
+      ctx.shadowBlur = 2;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      
+      // Draw corner markers
+      const markerLength = 30;
+      ctx.lineWidth = 4;
+      
+      // Top-left
+      ctx.beginPath();
+      ctx.moveTo(centerX - radius, centerY - radius + markerLength);
+      ctx.lineTo(centerX - radius, centerY - radius);
+      ctx.lineTo(centerX - radius + markerLength, centerY - radius);
+      ctx.stroke();
+      
+      // Top-right
+      ctx.beginPath();
+      ctx.moveTo(centerX + radius - markerLength, centerY - radius);
+      ctx.lineTo(centerX + radius, centerY - radius);
+      ctx.lineTo(centerX + radius, centerY - radius + markerLength);
+      ctx.stroke();
+      
+      // Bottom-left
+      ctx.beginPath();
+      ctx.moveTo(centerX - radius, centerY + radius - markerLength);
+      ctx.lineTo(centerX - radius, centerY + radius);
+      ctx.lineTo(centerX - radius + markerLength, centerY + radius);
+      ctx.stroke();
+      
+      // Bottom-right
+      ctx.beginPath();
+      ctx.moveTo(centerX + radius - markerLength, centerY + radius);
+      ctx.lineTo(centerX + radius, centerY + radius);
+      ctx.lineTo(centerX + radius, centerY + radius - markerLength);
+      ctx.stroke();
+    } else {
+      // Draw guide circle when no face detected
+      const centerX = canvasRef.current.width / 2;
+      const centerY = canvasRef.current.height / 2;
+      const radius = Math.min(canvasRef.current.width, canvasRef.current.height) / 3;
+      
+      ctx.strokeStyle = '#6B7280';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 10]);
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   };
 
@@ -68,6 +180,11 @@ export default function AgeVerification({ onComplete }) {
 
           setStatus("Position your face in the camera");
           console.log("Camera started and UI updated");
+          
+          // Start face detection overlay with reduced frequency to prevent blinking
+          intervalRef.current = setInterval(() => {
+            drawFaceOverlay();
+          }, 200);
         } else {
           console.error("Video ref is still null after timeout");
           setStatus("Video element not found");
@@ -81,10 +198,167 @@ export default function AgeVerification({ onComplete }) {
     }
   };
 
+  const livenessSteps = [
+    "Look straight at the camera",
+    "Look to your left", 
+    "Look to your right",
+    "Look straight again"
+  ];
+
+  const detectHeadPosition = (landmarks) => {
+    try {
+      // Use nose tip and face outline points to determine head orientation
+      const noseTip = landmarks.getNose()[3]; // Center bottom of nose
+      const leftFace = landmarks.getJawOutline()[0]; // Left edge of face
+      const rightFace = landmarks.getJawOutline()[16]; // Right edge of face
+      
+      // Calculate ratios to determine head position
+      const faceWidth = rightFace.x - leftFace.x;
+      const noseToLeft = noseTip.x - leftFace.x;
+      const noseToRight = rightFace.x - noseTip.x;
+      
+      const leftRatio = noseToLeft / faceWidth;
+      const rightRatio = noseToRight / faceWidth;
+      
+      console.log(`Head detection - leftRatio: ${leftRatio.toFixed(2)}, rightRatio: ${rightRatio.toFixed(2)}`);
+      
+      // More lenient thresholds for better detection
+      if (leftRatio < 0.4) {
+        return "right"; // Nose closer to left edge means head turned right
+      } else if (rightRatio < 0.4) {
+        return "left"; // Nose closer to right edge means head turned left
+      } else {
+        return "straight"; // Nose roughly centered
+      }
+    } catch (error) {
+      console.error("Error detecting head position:", error);
+      return "straight"; // Default to straight if detection fails
+    }
+  };
+
+  const performLivenessCheck = async () => {
+    if (!videoRef.current || !modelsLoaded) return false;
+
+    setLivenessCheck(true);
+    setLivenessStep(0);
+    setStatus(livenessSteps[0]);
+
+    try {
+      // Get initial face detection with descriptor
+      const detections = await faceapi
+        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      if (detections.length === 0) {
+        setStatus("No face detected for liveness check");
+        return false;
+      }
+
+      const initialDescriptor = detections[0].descriptor;
+      setBaseFaceDescriptor(initialDescriptor);
+
+      // Perform liveness steps with actual head movement detection
+      for (let step = 1; step < livenessSteps.length; step++) {
+        setLivenessStep(step);
+        setStatus(livenessSteps[step]);
+        
+        // Expected head positions for each step
+        const expectedPositions = ["straight", "left", "right", "straight"];
+        const expectedPosition = expectedPositions[step];
+        
+        // Wait for user to move and then verify multiple times
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        let correctPositionCount = 0;
+        const requiredCorrectCount = 3; // Need 3 consecutive correct detections
+        
+        // Check head position multiple times over 2 seconds
+        let faceNotFoundCount = 0;
+        const maxFaceNotFoundCount = 2; // Allow 2 failed detections out of 5
+        
+        for (let check = 0; check < 5; check++) {
+          const currentDetections = await faceapi
+            .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.3 }))
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+
+          if (currentDetections.length === 0) {
+            faceNotFoundCount++;
+            console.log(`Face not detected, attempt ${check + 1}/5, failed count: ${faceNotFoundCount}`);
+            
+            // If too many failures, return error
+            if (faceNotFoundCount > maxFaceNotFoundCount) {
+              setStatus("Face lost during liveness check. Please keep your face in view and try again.");
+              return false;
+            }
+            
+            // Wait and continue to next check
+            await new Promise(resolve => setTimeout(resolve, 400));
+            continue;
+          }
+
+          // Check face consistency (same person) - more tolerant during head movements
+          const currentDescriptor = currentDetections[0].descriptor;
+          const distance = faceapi.euclideanDistance(initialDescriptor, currentDescriptor);
+          
+          if (distance > 0.8) { // Increased threshold for head movements
+            setStatus("Different face detected - liveness check failed");
+            return false;
+          }
+
+          // Check head position
+          const landmarks = currentDetections[0].landmarks;
+          const detectedPosition = detectHeadPosition(landmarks);
+          
+          console.log(`Step ${step}: Expected ${expectedPosition}, Detected ${detectedPosition}, Count: ${correctPositionCount}`);
+          
+          if (detectedPosition === expectedPosition) {
+            correctPositionCount++;
+            console.log(`✓ Correct position detected! Count now: ${correctPositionCount}`);
+          } else {
+            correctPositionCount = Math.max(0, correctPositionCount - 1); // Penalize wrong positions
+            console.log(`✗ Wrong position. Expected ${expectedPosition}, got ${detectedPosition}`);
+          }
+          
+          // Wait between checks
+          await new Promise(resolve => setTimeout(resolve, 400));
+        }
+        
+        // Check if user followed the instruction correctly
+        if (correctPositionCount < requiredCorrectCount) {
+          setStatus(`Please follow the instruction: ${livenessSteps[step]}. Try again.`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          step--; // Retry this step
+          continue;
+        }
+        
+        setStatus(`Good! Now ${step < livenessSteps.length - 1 ? livenessSteps[step + 1] : 'completing verification...'}`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      setStatus("Liveness check passed! Analyzing age...");
+      return true;
+    } catch (error) {
+      console.error("Liveness check error:", error);
+      setStatus("Liveness check failed");
+      return false;
+    }
+  };
+
   const verifyAge = async () => {
     if (!videoRef.current || !modelsLoaded) return;
 
     setIsLoading(true);
+    
+    // Perform liveness check first
+    const livenessPass = await performLivenessCheck();
+    if (!livenessPass) {
+      setIsLoading(false);
+      setLivenessCheck(false);
+      return;
+    }
+
     setStatus("Analyzing your age...");
 
     try {
@@ -115,21 +389,31 @@ export default function AgeVerification({ onComplete }) {
           : `Access denied. Estimated age: ${estimatedAge}`
       );
 
-      // Stop camera
+      // Stop camera and overlay
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
       if (videoRef.current?.srcObject) {
         const tracks = videoRef.current.srcObject.getTracks();
         tracks.forEach((track) => track.stop());
       }
 
       setShowCamera(false);
+      setLivenessCheck(false);
 
       // Complete verification after delay
       setTimeout(() => {
-        onComplete(isOver18.toString());
+        if (enableRedirect) {
+          onComplete(isOver18.toString());
+        } else {
+          console.log("Redirect disabled. Verification result:", isOver18 ? "verified" : "denied");
+          // Just keep the result visible for testing
+        }
       }, 2000);
     } catch (error) {
       console.error("Age verification error:", error);
       setStatus("Verification failed. Please try again.");
+      setLivenessCheck(false);
     } finally {
       setIsLoading(false);
     }
@@ -175,19 +459,45 @@ export default function AgeVerification({ onComplete }) {
                   muted
                   className="object-cover w-full h-64 bg-black/50 rounded-2xl"
                 />
+                
+                {/* Hidden canvas for face detection */}
                 <canvas
                   ref={canvasRef}
-                  className="absolute top-0 left-0 w-full h-full"
+                  className="absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none"
                 />
+                
+                {/* Static professional face guide overlay */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="face-guide-container">
+                    {/* Main face oval */}
+                    <div className="face-guide-oval">
+                      <div className="face-guide-border"></div>
+                    </div>
+                    
+                    {/* Center positioning dot */}
+                    <div className="face-guide-center"></div>
+                  </div>
+                </div>
               </div>
 
               <button
                 onClick={verifyAge}
-                disabled={isLoading}
+                disabled={isLoading || livenessCheck}
                 className="mx-auto btn-primary"
               >
-                {isLoading ? "Analyzing..." : "Verify My Age"}
+                {isLoading ? "Analyzing..." : livenessCheck ? "Follow Instructions..." : "Verify My Age"}
               </button>
+              
+              {livenessCheck && (
+                <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl">
+                  <div className="text-blue-400 font-medium">
+                    Liveness Check - Step {livenessStep + 1} of {livenessSteps.length}
+                  </div>
+                  <div className="mt-2 text-sm text-blue-300">
+                    Follow the instructions and keep your face in view
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
